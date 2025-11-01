@@ -44,28 +44,37 @@ app.use("/public", express.static(process.cwd() + "/public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Start server first
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Listening on port ${PORT}`);
-});
-
-// Root route (available immediately)
-app.route("/").get((req, res) => {
-  res.render("index", {
-    title: "Connected to Database",
-    message: "Please log in",
-    showLogin: true,
-    showRegistration: true,
-    showSocialAuth: true
-  });
-});
-
 // Database connection and Passport logic
 myDB(async (client) => {
   console.log("Successfully connected to database");
 
   const myDataBase = await client.db("database").collection("users");
+
+  app.route('/').get((req, res) => {
+    res.render('index', {
+      title: 'Connected to Database',
+      message: 'Please log in',
+      showLogin: true
+    });
+  });
+
+  app.route('/login').post(passport.authenticate('local', { failureRedirect: '/' }), (req, res) => {
+    res.redirect('/profile');
+  });
+
+  app.route('/profile').get((req, res) => {
+    res.render('profile');
+  });
+
+  passport.use(new LocalStrategy((username, password, done) => {
+    myDataBase.findOne({ username: username }, (err, user) => {
+      console.log(`User ${username} attempted to log in.`);
+      if (err) return done(err);
+      if (!user) return done(null, false);
+      if (password !== user.password) return done(null, false);
+      return done(null, user);
+    });
+  }));
 
   // Serialization / Deserialization
   passport.serializeUser((user, done) => {
@@ -81,27 +90,15 @@ myDB(async (client) => {
     }
   });
 
-  passport.use(new LocalStrategy((username, password, done) => {
-    myDataBase.findOne({ username: username }, (err, user) => {
-      console.log(`User ${username} attempted to log in.`);
-      if (err) return done(err);
-      if (!user) return done(null, false);
-      if (password !== user.password) return done(null, false);
-      return done(null, user);
-    });
-  }));
+  // Start server AFTER routes are defined
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Listening on port ${PORT}`);
+  });
 })
-.catch((e) => {
-  console.error("Database connection error:", e);
-});
-
-// Basic error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send("Something broke!");
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).send("Page not found");
+.catch(e => {
+  console.error('Database connection failed:', e);
+  app.route('/').get((req, res) => {
+    res.render('index', { title: 'Error', message: 'Unable to connect to database' });
+  });
 });
