@@ -56,7 +56,7 @@ module.exports = function (app, myDataBase) {
       res.redirect('/profile');
     });
 
-  // ✅ GitHub authentication routes
+  // GitHub authentication routes
   app.route('/auth/github').get(passport.authenticate('github'));
 
   app.route('/auth/github/callback')
