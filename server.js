@@ -64,8 +64,21 @@ myDB(async (client) => {
     console.log(`Listening on port ${PORT}`);
   });
 
+  let currentUsers = 0;
   io.on('connection', socket => {
     console.log('A user has connected');
+    
+    // increment user count
+    ++currentUsers;
+    // emit the updated count to all clients
+    io.emit('user count', currentUsers);
+
+    // handle disconnection
+    socket.on('disconnect', () => {
+      console.log('A user has disconnected');
+      --currentUsers;
+      io.emit('user count', currentUsers);
+    });
   });
 })
 .catch(e => {

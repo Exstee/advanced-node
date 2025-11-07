@@ -1,5 +1,8 @@
 /* global io */
 let socket = io();
+socket.on('user count', function (data) {
+  console.log('Current users:', data);
+});
 
 $(document).ready(function () {
   // Form submittion with new message in field with id 'm'
