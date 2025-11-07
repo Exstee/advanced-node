@@ -9,11 +9,11 @@ module.exports = function (app, myDataBase) {
       message: 'Please log in',
       showLogin: true,
       showRegistration: true,
-      showSocialAuth: true  // Enables GitHub login button
+      showSocialAuth: true // Enables GitHub login button
     });
   });
 
-  // Local login route
+  // Local login
   app.route('/login')
     .post(passport.authenticate('local', { failureRedirect: '/' }), (req, res) => {
       res.redirect('/profile');
@@ -25,16 +25,16 @@ module.exports = function (app, myDataBase) {
       res.render('profile', { username: req.user.username });
     });
 
-  // Logout route
+  // Logout
   app.route('/logout')
-    .get((req, res) => {
-      req.logout(function(err) {
+    .get((req, res, next) => {
+      req.logout(err => {
         if (err) return next(err);
         res.redirect('/');
       });
     });
 
-  // Registration route
+  // Register new user
   app.route('/register')
     .post((req, res, next) => {
       const hash = bcrypt.hashSync(req.body.password, 12);
@@ -46,6 +46,7 @@ module.exports = function (app, myDataBase) {
           { username: req.body.username, password: hash },
           (err, doc) => {
             if (err) return res.redirect('/');
+            // The inserted document is held within doc.ops[0]
             next(null, doc.ops[0]);
           }
         );
@@ -56,12 +57,20 @@ module.exports = function (app, myDataBase) {
       res.redirect('/profile');
     });
 
-  // GitHub authentication routes
-  app.route('/auth/github').get(passport.authenticate('github'));
+  // GitHub authentication
+  app.route('/auth/github')
+    .get(passport.authenticate('github'));
 
   app.route('/auth/github/callback')
     .get(passport.authenticate('github', { failureRedirect: '/' }), (req, res) => {
-      res.redirect('/profile');
+      req.session.user_id = req.user.id;
+      res.redirect('/chat');
+    });
+
+  // Chat route (protected)
+  app.route('/chat')
+    .get(ensureAuthenticated, (req, res) => {
+      res.render('chat', { user: req.user });
     });
 
   // 404 handler
@@ -72,7 +81,7 @@ module.exports = function (app, myDataBase) {
   });
 };
 
-// Authentication middleware
+// Auth middleware
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) return next();
   res.redirect('/');

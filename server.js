@@ -8,8 +8,14 @@ const session = require('express-session');
 const passport = require('passport');
 const routes = require('./routes.js');
 const auth = require('./auth.js');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
+
+// Create the HTTP and Socket.IO servers
+const server = http.createServer(app);
+const io = new Server(server);
 
 // Use CORS middleware
 app.use(
@@ -53,10 +59,13 @@ myDB(async (client) => {
   routes(app, myDataBase);
   auth(app, myDataBase);
 
-  // Start server AFTER routes are defined
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`Listening on port ${PORT}`);
+  });
+
+  io.on('connection', socket => {
+    console.log('A user has connected');
   });
 })
 .catch(e => {
