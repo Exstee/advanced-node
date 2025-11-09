@@ -93,16 +93,26 @@ myDB(async (client) => {
   // Socket.IO logic
   let currentUsers = 0;
   io.on('connection', (socket) => {
-    console.log('A user has connected');
-    console.log('user ' + socket.request.user.username + ' connected');
-
+    console.log(`user ${socket.request.user.username} connected`);
     ++currentUsers;
-    io.emit('user count', currentUsers);
+
+    // Broadcast that a user has joined
+    io.emit('user', {
+      username: socket.request.user.username,
+      currentUsers,
+      connected: true
+    });
 
     socket.on('disconnect', () => {
-      console.log('A user has disconnected');
+      console.log(`user ${socket.request.user.username} disconnected`);
       --currentUsers;
-      io.emit('user count', currentUsers);
+
+      // Broadcast that a user has left
+      io.emit('user', {
+        username: socket.request.user.username,
+        currentUsers,
+        connected: false
+      });
     });
   });
 
